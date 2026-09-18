@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Overview from './Overview.jsx'
+import EventModal from './EventModal.jsx'
+import WeatherModal from './WeatherModal.jsx'
 import {
   RiskMonitorPage, PredictionPage, WhyPage, WhatIfPage, RecommendationPage, PerformancePage,
   ReportsPage, SettingsPage,
@@ -48,7 +50,7 @@ function Sidebar({ page, setPage, meta, collapsed, onToggle }) {
 }
 
 /* ---------- topbar ---------- */
-function TopBar({ data, events, dateIdx, setDateIdx, bucket, setBucket, playing, setPlaying, speed, setSpeed, horizonMin, setHorizonMin, settings }) {
+function TopBar({ data, events, dateIdx, setDateIdx, bucket, setBucket, playing, setPlaying, speed, setSpeed, horizonMin, setHorizonMin, settings, onOpenEventModal, onOpenWeatherModal }) {
   const dstr = data.dates[dateIdx]
   const pct = (Math.min(bucket, B_LAST) / B_LAST) * 100
   const pctB = Math.min(Math.max(pct, 3.5), 96.5) // bubble tidak terpotong di tepi slider
@@ -101,8 +103,8 @@ function TopBar({ data, events, dateIdx, setDateIdx, bucket, setBucket, playing,
           <button key={v} className={`chip ${horizonMin === v ? 'active' : ''}`} onClick={() => setHorizonMin(v)}>{lbl}</button>
         ))}
       </div>
-      <div className="tb-ctx" data-tip={dayEvents.map((e) => `${e.name} (${e.start}–${e.end})`).join(' · ') || 'Tidak ada event terjadwal hari ini'}>
-        <span className="ctx-pill" data-tip={RAIN_TIP}>
+      <div className="tb-ctx">
+        <span className="ctx-pill clickable-wx" onClick={onOpenWeatherModal} data-tip="Klik untuk buka Panel Cuaca Intelligence">
           {settings && !settings.rainLabel
             ? (nowRain > 0
                 ? `🌧 ${nowRain.toFixed(1).replace('.', ',')} mm/jam · total ${totalRain.toFixed(1).replace('.', ',')} mm`
@@ -111,7 +113,9 @@ function TopBar({ data, events, dateIdx, setDateIdx, bucket, setBucket, playing,
                   : '☀ 0,0 mm')
             : rainText(nowRain, totalRain)}
         </span>
-        {dayEvents.length > 0 && <span className="ctx-pill ev">📅 {dayEvents.length} event</span>}
+        <span className="ctx-pill ev clickable-ev" onClick={onOpenEventModal}>
+          📅 {dayEvents.length > 0 ? `${dayEvents.length} event` : 'Panel Event 📅'}
+        </span>
       </div>
       <div className="datamode">
         DATA MODE
@@ -158,6 +162,8 @@ export default function App() {
   })
   const [sel, setSel] = useState('Blok M BCA')
   const [riskFilter, setRiskFilter] = useState(null)
+  const [showEventModal, setShowEventModal] = useState(false)
+  const [showWeatherModal, setShowWeatherModal] = useState(false)
 
   // v4: sidebar lipat + preferensi tampilan (tersimpan di browser operator)
   const DEFAULTS = { anim: true, tips: true, rainLabel: true, defHorizon: 60, defSpeed: 1 }
@@ -234,7 +240,10 @@ export default function App() {
     setPage('Risk Monitor')
   }
 
-  const shared = { data, dateIdx, bucket, hb, hSteps, horizonMin, horizonStr, riskNow, sel, setSel, rowOf, events, settings }
+  const onOpenEventModal = () => setShowEventModal(true)
+  const onOpenWeatherModal = () => setShowWeatherModal(true)
+
+  const shared = { data, dateIdx, bucket, hb, hSteps, horizonMin, horizonStr, riskNow, sel, setSel, rowOf, events, settings, onOpenEventModal, onOpenWeatherModal }
 
   return (
     <div className={`app ${settings.tips ? '' : 'no-tips'} ${settings.anim ? '' : 'no-anim'}`}>
@@ -243,7 +252,7 @@ export default function App() {
       <div className="main">
         <TopBar data={data} events={events} dateIdx={dateIdx} setDateIdx={setDateIdx} bucket={bucket}
           setBucket={setBucket} playing={playing} setPlaying={setPlaying} speed={speed} setSpeed={setSpeed}
-          horizonMin={horizonMin} setHorizonMin={setHorizonMin} settings={settings} />
+          horizonMin={horizonMin} setHorizonMin={setHorizonMin} settings={settings} onOpenEventModal={onOpenEventModal} onOpenWeatherModal={onOpenWeatherModal} />
         <div key={page} className="pagefade">
         {page === 'Overview' && (
           <Overview {...shared} counts={counts} countsPrev={countsPrev} prevAt={prevAt}
@@ -259,13 +268,29 @@ export default function App() {
         {page === 'Performance' && <PerformancePage data={data} />}
         {page === 'Reports' && (
           <ReportsPage data={data} dateIdx={dateIdx} bucket={bucket} events={events}
-            horizonStr={horizonStr} horizonMin={horizonMin} />
+            horizonStr={horizonStr} horizonMin={horizonMin} onOpenEventModal={onOpenEventModal} />
         )}
         {page === 'Settings' && (
           <SettingsPage settings={settings} setSetting={setSetting} onReset={resetSettings} />
         )}
         </div>
       </div>
+      <EventModal
+        isOpen={showEventModal}
+        onClose={() => setShowEventModal(false)}
+        events={events}
+        dateStr={data.dates[dateIdx]}
+        setSel={setSel}
+        goTab={setPage}
+      />
+      <WeatherModal
+        isOpen={showWeatherModal}
+        onClose={() => setShowWeatherModal(false)}
+        data={data}
+        dateIdx={dateIdx}
+        bucket={bucket}
+      />
     </div>
   )
 }
+

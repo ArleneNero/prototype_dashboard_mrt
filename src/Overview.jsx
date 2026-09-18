@@ -89,19 +89,40 @@ function KpiCards({ counts, countsPrev, at, onDrill }) {
 }
 
 /* ================= konteks tanggal (event + hujan) ================= */
-function ContextBar({ events, dateStr, nowRain, rainTotal, settings }) {
+function ContextBar({ events, dateStr, nowRain, rainTotal, settings, onOpenEventModal, onOpenWeatherModal }) {
   const evs = eventsOn(events, dateStr)
   return (
     <div className="ctxbar card">
-      <span className="ctx-item" data-tip="Event terverifikasi di sekitar koridor MRT hari ini — sumber kenaikan demand">
+      <span
+        className="ctx-item clickable-ev"
+        onClick={onOpenEventModal}
+        data-tip="Klik untuk lihat rincian event hari ini & jadwal koridor MRT"
+      >
         📅 {evs.length === 0 ? 'Tidak ada event terjadwal' : `${evs.length} event hari ini:`}
       </span>
       {evs.map((e) => (
-        <span key={e.name} className="ctx-badge" data-tip={e.basis}>
+        <span
+          key={e.name}
+          className="ctx-badge clickable-ev"
+          onClick={onOpenEventModal}
+          data-tip={`${e.basis || e.name} — Klik untuk lihat di Panel Event`}
+        >
           {e.name} · {e.start}–{e.end} · ~{fmt(e.attendance)} · {short(e.station)}
         </span>
       ))}
-      <span className="ctx-item" style={{ marginLeft: 'auto' }} data-tip={RAIN_TIP}>
+      <button
+        className="btn-ev-panel"
+        onClick={onOpenEventModal}
+        data-tip="Buka Panel Event Intelligence"
+      >
+        📅 Panel Event →
+      </button>
+      <span
+        className="ctx-item clickable-ev"
+        style={{ marginLeft: 'auto' }}
+        onClick={onOpenWeatherModal}
+        data-tip="Klik untuk buka Panel Cuaca Intelligence & profil hujan per 15 mnt"
+      >
         {settings && !settings.rainLabel
           ? (nowRain > 0
               ? `🌧 ${nowRain.toFixed(1).replace('.', ',')} mm/jam · total ${rainTotal.toFixed(1).replace('.', ',')} mm`
@@ -598,7 +619,7 @@ function WhatIfMini({ base, cap, horizonStr, goWhatif }) {
 export default function Overview(props) {
   const {
     data, dateIdx, bucket, hb, hSteps, horizonMin, horizonStr, counts, countsPrev, prevAt,
-    riskNow, sel, setSel, rowOf, onDrill, goTab, events, settings,
+    riskNow, sel, setSel, rowOf, onDrill, goTab, events, settings, onOpenEventModal, onOpenWeatherModal,
   } = props
   const selInfo = riskNow.find((r) => r.st === sel)
   const srows = data.rows[sel].slice(dateIdx * 76, dateIdx * 76 + 76)
@@ -608,7 +629,7 @@ export default function Overview(props) {
   return (
     <div className="content">
       <KpiCards counts={counts} countsPrev={countsPrev} at={prevAt} onDrill={onDrill} />
-      <ContextBar events={events} dateStr={dateStr} nowRain={rainAt(data, dateIdx, bucket)} rainTotal={dailyRain(data, dateIdx)} settings={settings} />
+      <ContextBar events={events} dateStr={dateStr} nowRain={rainAt(data, dateIdx, bucket)} rainTotal={dailyRain(data, dateIdx)} settings={settings} onOpenEventModal={onOpenEventModal} onOpenWeatherModal={onOpenWeatherModal} />
       <AiNetworkCard counts={counts} riskNow={riskNow} events={events} dateStr={dateStr}
         nowRain={rainAt(data, dateIdx, bucket)} rainTotal={dailyRain(data, dateIdx)} horizonStr={horizonStr} horizonMin={horizonMin} />
       <div className="row2">

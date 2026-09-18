@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import StockChart from './chart.jsx'
 import { WhyBars, AiBox } from './Overview.jsx'
+import { MODEL, getOpenRouterKey, setOpenRouterKey, testAIConnection } from './llm.js'
 import {
   Badge, StationLine, rowAt, riskOf, b2str, fmt, fmtDate, short, whyOf, typicalOf,
   LAJU_GATE_BUCKET, RISKS, HOTSPOTS, eventsOn, dailyRain, B_LAST, RAIN_TIP, NOWCAST_TIP,
@@ -618,7 +619,7 @@ export function PerformancePage({ data }) {
 }
 
 /* ================= Reports (v4: aktif) ================= */
-export function ReportsPage({ data, dateIdx, events, horizonStr, horizonMin }) {
+export function ReportsPage({ data, dateIdx, events, horizonStr, horizonMin, onOpenEventModal }) {
   const dateStr = data.dates[dateIdx]
   const rep = useMemo(() => {
     let totalIn = 0, totalOut = 0
@@ -691,10 +692,26 @@ export function ReportsPage({ data, dateIdx, events, horizonStr, horizonMin }) {
       </div>
       {evs.length > 0 && (
         <div className="ctxbar card">
-          <span className="ctx-item">📅 Event hari ini:</span>
+          <span
+            className="ctx-item clickable-ev"
+            onClick={onOpenEventModal}
+            data-tip="Klik untuk buka Panel Event Hari Ini & Jadwal Koridor MRT"
+          >
+            📅 Event hari ini:
+          </span>
           {evs.map((e) => (
-            <span key={e.name} className="ctx-badge" data-tip={e.basis}>{e.name} · {e.start}–{e.end}</span>
+            <span
+              key={e.name}
+              className="ctx-badge clickable-ev"
+              onClick={onOpenEventModal}
+              data-tip={`${e.basis || e.name} — Klik untuk lihat di Panel Event`}
+            >
+              {e.name} · {e.start}–{e.end}
+            </span>
           ))}
+          <button className="btn-ev-panel" onClick={onOpenEventModal}>
+            📅 Panel Event →
+          </button>
         </div>
       )}
       <div className="card">
@@ -746,12 +763,100 @@ function SetRow({ t, d, k, settings, setSetting }) {
 }
 
 export function SettingsPage({ settings, setSetting, onReset }) {
+  const [apiKeyInput, setApiKeyInput] = useState(() => {
+    return typeof window !== 'undefined' ? (localStorage.getItem('foresight_openrouter_api_key') || '') : ''
+  })
+  const [keySaved, setKeySaved] = useState(false)
+  const [testState, setTestState] = useState({ status: 'idle', msg: '' })
+
+  const handleSaveKey = () => {
+    setOpenRouterKey(apiKeyInput)
+    setKeySaved(true)
+    setTimeout(() => setKeySaved(false), 2500)
+  }
+
+  const handleResetKey = () => {
+    setApiKeyInput('')
+    setOpenRouterKey('')
+    setKeySaved(true)
+    setTimeout(() => setKeySaved(false), 2500)
+  }
+
+  const handleTest = async () => {
+    setTestState({ status: 'loading', msg: 'Menguji koneksi ke OpenRouter...' })
+    try {
+      const res = await testAIConnection()
+      setTestState({ status: 'success', msg: `Koneksi Berhasil! (${res})` })
+    } catch (err) {
+      setTestState({ status: 'error', msg: `Koneksi Gagal: ${err.message || String(err)}` })
+    }
+  }
+
   return (
     <div className="content">
       <div className="pagehead">
         <div>
           <h2>Settings</h2>
-          <div className="sub">Preferensi tampilan — tersimpan otomatis di browser ini</div>
+          <div className="sub">Preferensi tampilan & konfigurasi AI — tersimpan otomatis di browser</div>
+        </div>
+      </div>
+
+      <div className="card" style={{ maxWidth: 660, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h3 style={{ margin: 0 }}>🤖 AI Analyzer Engine</h3>
+          <span style={{ fontSize: 11, background: '#e0f2fe', color: '#0369a1', padding: '3px 9px', borderRadius: 12, fontWeight: 700 }}>
+            OpenRouter API
+          </span>
+        </div>
+        <div className="set-row">
+          <div>
+            <div className="t">Model AI Aktif</div>
+            <div className="d">Model LLM berkecepatan tinggi dengan grounding data ketat</div>
+          </div>
+          <code style={{ fontSize: 12, background: '#f1f5f9', padding: '4px 8px', borderRadius: 6, fontWeight: 600, color: '#1e293b' }}>
+            {MODEL}
+          </code>
+        </div>
+        <div className="set-row" style={{ alignItems: 'flex-start' }}>
+          <div style={{ flex: 1, marginRight: 16 }}>
+            <div className="t">API Key (OpenRouter)</div>
+            <div className="d">API Key bawaan telah aktif. Anda dapat memasukkan key kustom di sini jika diinginkan.</div>
+            <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+              <input
+                type="password"
+                className="stselect"
+                style={{ flex: 1, padding: '6px 10px', fontSize: 12 }}
+                placeholder="sk-or-v1-... (Kosongkan untuk pakai key bawaan)"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+              />
+              <button className="btn" onClick={handleSaveKey} style={{ padding: '6px 12px', fontSize: 12 }}>
+                Simpan
+              </button>
+              {apiKeyInput && (
+                <button className="btn" onClick={handleResetKey} style={{ padding: '6px 10px', fontSize: 12 }} title="Reset ke key bawaan">
+                  ↺
+                </button>
+              )}
+            </div>
+            {keySaved && <div style={{ fontSize: 11, color: '#16a34a', marginTop: 4, fontWeight: 600 }}>✓ Pengaturan API Key disimpan!</div>}
+          </div>
+        </div>
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+          <button
+            className="ai-btn"
+            style={{ padding: '7px 14px', fontSize: 12 }}
+            onClick={handleTest}
+            disabled={testState.status === 'loading'}
+          >
+            {testState.status === 'loading' ? '⏳ Menguji Koneksi…' : '⚡ Tes Koneksi AI'}
+          </button>
+          {testState.status === 'success' && (
+            <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✓ {testState.msg}</span>
+          )}
+          {testState.status === 'error' && (
+            <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>✗ {testState.msg}</span>
+          )}
         </div>
       </div>
       <div className="card" style={{ maxWidth: 660 }}>
