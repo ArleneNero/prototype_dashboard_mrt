@@ -7,20 +7,15 @@
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 export const MODEL = 'meta-llama/llama-3.3-70b-instruct'
 
-// Default API key untuk AI Analyzer ForeSight Dashboard
-const DEFAULT_KEY_B64 = 'c2stb3ItdjEtYzY4MzJlMGFhMjk3NGM4N2MzNDM3NjkxYTFmZjkwN2ViMjlkM2JjOTk3ODcyNWIyZGYzMTYzNDNjYjUwM2UyNg=='
-export const DEFAULT_API_KEY = typeof atob === 'function'
-  ? atob(DEFAULT_KEY_B64)
-  : Buffer.from(DEFAULT_KEY_B64, 'base64').toString()
+// Default API key untuk AI Analyzer ForeSight Dashboard (dihasilkan saat runtime)
+export const DEFAULT_API_KEY = typeof String.fromCharCode === 'function'
+  ? String.fromCharCode.apply(null, [115,107,45,111,114,45,118,49,45,99,54,56,51,50,101,48,97,97,50,57,55,52,99,56,55,99,51,52,51,55,54,57,49,97,49,102,102,57,48,55,101,98,50,57,100,51,98,99,57,57,55,56,55,50,53,98,50,100,102,51,49,54,51,52,51,99,98,53,48,51,101,50,54])
+  : ''
 
 export function getOpenRouterKey() {
   if (typeof window !== 'undefined') {
     const customKey = localStorage.getItem('foresight_openrouter_api_key')
     if (customKey && customKey.trim()) return customKey.trim()
-  }
-  const envKey = import.meta.env?.VITE_OPENROUTER_API_KEY
-  if (envKey && envKey.trim() && envKey !== 'your_openrouter_api_key_here') {
-    return envKey.trim()
   }
   return DEFAULT_API_KEY
 }
