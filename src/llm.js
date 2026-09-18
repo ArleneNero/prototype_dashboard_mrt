@@ -9,8 +9,8 @@ export const MODEL = 'meta-llama/llama-3.3-70b-instruct'
 
 // Default API key untuk AI Analyzer ForeSight Dashboard
 const DEFAULT_KEY_B64 = 'c2stb3ItdjEtYzY4MzJlMGFhMjk3NGM4N2MzNDM3NjkxYTFmZjkwN2ViMjlkM2JjOTk3ODcyNWIyZGYzMTYzNDNjYjUwM2UyNg=='
-export const DEFAULT_API_KEY = typeof atob === 'function' 
-  ? atob(DEFAULT_KEY_B64) 
+export const DEFAULT_API_KEY = typeof atob === 'function'
+  ? atob(DEFAULT_KEY_B64)
   : Buffer.from(DEFAULT_KEY_B64, 'base64').toString()
 
 export function getOpenRouterKey() {
